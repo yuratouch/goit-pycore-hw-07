@@ -1,5 +1,6 @@
 import re
 from collections import UserDict
+from datetime import datetime, timedelta
 
 class PhoneVerificationError(Exception):
     def __init__(self, phone):
@@ -28,11 +29,20 @@ class Phone(Field):
             self.phone = phone
         else:
              raise PhoneVerificationError(phone)
-         
+
+class Birthday(Field):
+    def __init__(self, value):
+        super().__init__(value)
+        try:
+            self.birthday = datetime.strptime(value, "%d.%m.%Y")
+        except ValueError:
+            raise ValueError("Invalid date format. Use DD.MM.YYYY")
+
 class Record:
     def __init__(self, name):
         self.name = Name(name)
         self.phones = []
+        self.birthday = None
 
     def add_phone(self, phone):
         try:
@@ -52,9 +62,15 @@ class Record:
         for phone in self.phones:
             if phone_input == phone.phone:
                 return phone
+            
+    def add_birthday(self, birthday):
+            try:
+                self.birthday = Birthday(birthday)
+            except ValueError as e:
+                print(e)
 
     def __str__(self):
-        return f"Contact name: {self.name.value}, phones: {'; '.join(p.value for p in self.phones)}"
+        return f"Contact name: {self.name.value}, phones: {'; '.join(p.value for p in self.phones)}, birthday: {self.birthday}"
 
 class AddressBook(UserDict):
     def add_record(self, record):
@@ -66,13 +82,41 @@ class AddressBook(UserDict):
                 return record
             
     def delete(self, name):
-        for record_name, record in self.data.items():
+        for record_name, _ in self.data.items():
             if name == record_name.name.value:
                 self.data.pop(record_name)
                 break
 
+    def get_upcoming_birthdays(self):
+        current_date = datetime.today().date()
+        congratulations = []
+
+        for record_name, record in self.data.items():
+            try:
+                record_birthday = record.birthday.birthday.date()
+                birthday_this_year = record_birthday.replace(year=current_date.year)
+
+                if birthday_this_year < current_date:
+                    continue
+
+                if (birthday_this_year - current_date).days > 7:
+                    continue
+
+                if birthday_this_year.weekday() == 5:
+                    congratulation_date = birthday_this_year + timedelta(days=2)
+                elif birthday_this_year.weekday() == 6:
+                    congratulation_date = birthday_this_year + timedelta(days=1)
+                else:
+                    congratulation_date = birthday_this_year
+
+                congratulations.append({"name": record_name.name.value, "congratulation_date": congratulation_date.strftime("%Y.%m.%d")})
+            except: AttributeError
         
-        
+        if len(congratulations) > 0:
+            return congratulations
+        else: 
+            return "No birthdays in upcoming week"
+    
 # Створення нової адресної книги
 book = AddressBook()
 
@@ -102,6 +146,14 @@ print(john)  # Виведення: Contact name: John, phones: 1112223333; 55555
 # Пошук конкретного телефону у записі John
 found_phone = john.find_phone("5555555555")
 print(f"{john.name}: {found_phone}")  # Виведення: 5555555555
+
+# Додавання днів народжень для John та Jane
+john_record.add_birthday("12.05.1993") 
+jane_record.add_birthday("18.05.1999")
+
+# Виведення списку контактів яких потрібно привітати на наступному тижні
+upcoming_birthdays = book.get_upcoming_birthdays()
+print(upcoming_birthdays)
 
 # Видалення запису Jane
 book.delete("Jane")

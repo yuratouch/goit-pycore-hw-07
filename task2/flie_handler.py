@@ -1,18 +1,44 @@
-def save_to_file(contacts:dict) -> None:  
-    with open("contacts.txt", "w", encoding="utf-8") as file:
-        for contact in contacts:
-            line = contact + " " + contacts[contact]
-            file.write(line + "\n")
+from datetime import datetime
+from book import AddressBook, Record
 
-def get_contacts() -> dict:
-    contacts_dict = {}
+def save_to_file(book: AddressBook) -> None:  
+    with open("contacts.txt", "w", encoding="utf-8") as file:
+        for record_name, record in book.data.items():
+            line = record_name.value + " " + ','.join(p.value for p in record.phones)
+
+            if record.birthday:
+                file.write(line + " " + datetime.strftime(record.birthday.birthday, "%d.%m.%Y") + "\n")   
+            else:
+                file.write(line + "\n") 
+
+def save_phones(list, record):
+    if len(list) > 0:
+        for phone in list:
+            record.add_phone(phone)
+
+def get_contacts() -> AddressBook:
+    book = AddressBook()
     try:
         with open("contacts.txt", "r", encoding="utf-8") as file:
-            contacts = file.readlines()
-            for contact in contacts:
-                name, phone_number = contact.split()
-                contacts_dict[name] = phone_number
-            return contacts_dict
+            lines = file.readlines()
+
+            for line in lines:
+                try:
+                    name, phone_numbers, date = line.split()
+                    record = Record(name)
+
+                    save_phones(phone_numbers.split(","), record)
+                    record.add_birthday(date)
+                    book.add_record(record)
+
+                except ValueError:
+                    name, phone_numbers = line.split()
+                    record = Record(name)
+
+                    save_phones(phone_numbers.split(","), record)
+                    book.add_record(record)
+
+            return book
         
     except FileNotFoundError:
-        return contacts_dict
+        return book

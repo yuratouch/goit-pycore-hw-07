@@ -2,9 +2,10 @@ import re
 from collections import UserDict
 
 class PhoneVerificationError(Exception):
-      def __init__(self, message="Invalid phone number."):
-            self.message = message
-            super().__init__(self.message)
+    def __init__(self, phone):
+        self.phone = phone
+        self.message = f"Invalid phone number: {phone}"
+        super().__init__(self.message)
 
 class Field:
     def __init__(self, value):
@@ -26,7 +27,7 @@ class Phone(Field):
         if re.match(Phone.pattern, phone):
             self.phone = phone
         else:
-             raise PhoneVerificationError
+             raise PhoneVerificationError(phone)
          
 class Record:
     def __init__(self, name):
@@ -34,7 +35,10 @@ class Record:
         self.phones = []
 
     def add_phone(self, phone):
-        self.phones.append(Phone(phone))
+        try:
+            self.phones.append(Phone(phone))
+        except PhoneVerificationError as e: 
+            print(e.message)
 
     def remove_phone(self, phone):
         self.phones.remove(self.find_phone(phone)) 
